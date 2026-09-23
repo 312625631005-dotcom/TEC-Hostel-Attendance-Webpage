@@ -374,13 +374,20 @@ async function exportReport(fmt){
 }
 
 async function doSave(filename, blob){
-  if(!downloadsCap){ alert('Downloads are not available in this view.'); return; }
-  try{
-    await downloadsCap.save({filename, data: blob});
-  }catch(e){
-    if(e && e.code === 'declined') return;
-    alert('Could not save file: ' + (e && e.message ? e.message : 'unknown error'));
+  // Works on any normal web host (Vercel, GitHub Pages, local file, etc.)
+  function browserDownload(){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
   }
+  if(downloadsCap){
+    try{ await downloadsCap.save({filename, data: blob}); return; }
+    catch(e){ if(e && e.code === 'declined') return; }
+  }
+  browserDownload();
 }
 
 function renderDash(){
