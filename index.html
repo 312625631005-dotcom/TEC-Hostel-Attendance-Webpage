@@ -182,10 +182,58 @@ nav.tabs button.active{color:var(--accent)}
 let downloadsCap = null;
 (async()=>{ try{ downloadsCap = await claude.use("downloads"); }catch(e){} })();
 
+// ===== CLOUD SYNC via Google Sheets (Boys Data / Girls Data / Attendance) =====
+// Paste your deployed Apps Script Web App URL below (ends in /exec) to turn this on.
+// Leave as null to keep data local to this device only.
+const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycbzH8BzZy97lU0b1BrBCXtsprlWWcwb0COli1fhezCoxugIfKXWoqtrQoa5E6CWtA0AB/exec";
+// Example: const SHEETS_API_URL = "https://script.google.com/macros/s/AKfycb.../exec";
+
+let cloudReady = false;
+async function fetchCloud(){
+  const res = await fetch(SHEETS_API_URL + '?action=load');
+  return await res.json();
+}
+async function initCloud(){
+  if(!SHEETS_API_URL) return;
+  try{
+    const remote = await fetchCloud();
+    if(remote && Array.isArray(remote.students)){
+      DB = remote;
+      DB.students.forEach(s=>{ if(!s.hostel) s.hostel='Boys'; });
+      try{ localStorage.setItem('hostel_db', JSON.stringify(DB)); }catch(e){}
+    }
+    cloudReady = true;
+    refreshCurrentView();
+    setInterval(pollCloud, 15000); // check for changes from other phones every 15s
+  }catch(e){ console.error('Cloud sync unavailable, using local storage only:', e); }
+}
+async function pollCloud(){
+  if(!cloudReady) return;
+  try{
+    const remote = await fetchCloud();
+    if(remote && Array.isArray(remote.students) && JSON.stringify(remote) !== JSON.stringify(DB)){
+      DB = remote;
+      DB.students.forEach(s=>{ if(!s.hostel) s.hostel='Boys'; });
+      try{ localStorage.setItem('hostel_db', JSON.stringify(DB)); }catch(e){}
+      refreshCurrentView();
+    }
+  }catch(e){}
+}
+
 let DB = {students:[], attendance:{}};
 try{ const raw = localStorage.getItem('hostel_db'); if(raw) DB = JSON.parse(raw); }catch(e){}
 DB.students.forEach(s=>{ if(!s.hostel) s.hostel='Boys'; });
-function save(){ try{ localStorage.setItem('hostel_db', JSON.stringify(DB)); }catch(e){} }
+function save(){
+  try{ localStorage.setItem('hostel_db', JSON.stringify(DB)); }catch(e){}
+  if(cloudReady && SHEETS_API_URL){
+    fetch(SHEETS_API_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // avoids a CORS preflight
+      body: JSON.stringify({action:'save', db: DB})
+    }).catch(e=>console.error('Cloud save failed:', e));
+  }
+}
+initCloud();
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 let curSession='MORNING', repSession='MORNING';
 let curHostel='Boys';
