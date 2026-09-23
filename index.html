@@ -72,6 +72,7 @@ nav.tabs button.active{color:var(--accent)}
 .pill{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--bg);color:var(--sub)}
 .view{display:none}
 .view.active{display:block}
+.poweredby{position:fixed;right:10px;bottom:calc(64px + env(safe-area-inset-bottom,0px));font-size:10px;color:var(--sub);opacity:.55;z-index:4;pointer-events:none;letter-spacing:.02em}
 </style>
 </head>
 <body class="theme-boys">
@@ -166,6 +167,8 @@ nav.tabs button.active{color:var(--accent)}
 </section>
 
 </main>
+
+<div class="poweredby">Powered by THIVARA Solutions</div>
 
 <nav class="tabs">
   <button class="active" onclick="showView('dash',this)"><span class="ic">🏠</span>Dashboard</button>
